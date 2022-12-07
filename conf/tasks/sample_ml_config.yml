@@ -1,0 +1,4 @@
+input:
+  database: "default"
+  table: "sklearn_housing"
+experiment: "/Shared/ml-prod-deployment_experiment"
