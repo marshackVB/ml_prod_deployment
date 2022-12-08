@@ -66,7 +66,7 @@ predictions_df.write.mode('overwrite').format('delta').saveAsTable(scoring_confi
 def test_counts():
   # Confirm precitions table contains predictions
   _count = predictions_df.count()
-  assert _count > 0
+  assert _count < 0
 
 # COMMAND ----------
 
