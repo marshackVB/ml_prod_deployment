@@ -32,10 +32,7 @@ client = MlflowClient()
 
 # COMMAND ----------
 
-#dbutils.widgets.dropdown("run_as_integration_test", "False", ["True", "False"])
 dbutils.widgets.dropdown("compare_model_registry_versions", "True", ["True", "False"])
-
-#run_as_integration_test = True if dbutils.widgets.get("run_as_integration_test") == "True" else False
 compare_model_registry_versions = True if dbutils.widgets.get("compare_model_registry_versions") == "True" else False
 
 # COMMAND ----------

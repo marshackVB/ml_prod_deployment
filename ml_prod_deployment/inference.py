@@ -70,4 +70,6 @@ def test_counts():
 
 # COMMAND ----------
 
-test_counts()
+if run_as_integration_test:
+
+  test_counts()
