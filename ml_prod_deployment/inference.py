@@ -38,8 +38,8 @@ production_run_id = get_run_id(scoring_config.mlflow_model_registry_name, stage=
 production_model_uri = f"runs:/{production_run_id}/model"
 
 print(f"Loading Production model from Registry, {scoring_config.mlflow_model_registry_name}, with run_id: {production_run_id}")
-
-loaded_model = mlflow.pyfunc.load_model(f"runs:/{production_run_id}/model")
+loaded_model = mlflow.pyfunc.spark_udf(spark, model_uri=production_model_uri, result_type='double')
+#loaded_model = mlflow.pyfunc.load_model(production_model_uri)
 
 # COMMAND ----------
 
@@ -47,13 +47,12 @@ loaded_model = mlflow.pyfunc.load_model(f"runs:/{production_run_id}/model")
 
 # COMMAND ----------
 
-features_df = (spark.table(scoring_config.feature_table_name))
+features_df = spark.table(scoring_config.feature_table_name)
 non_feature_columns = ["Survived", "PassengerId"]
-features_columns = [col for col in features_df.columns if col not in non_feature_columns]
+feature_columns = [col for col in features_df.columns if col not in non_feature_columns]
 
-predictions_df = features_df.withColumn('predictions', loaded_model(struct(*map(col, features_columns))))
-
-display(predictions)
+predictions_df = features_df.withColumn('predictions', loaded_model(struct(*map(col, feature_columns))))
+display(predictions_df)
 
 # Change to 'append'
 predictions_df.write.mode('overwrite').format('delta').saveAsTable(scoring_config.predictions_table)
