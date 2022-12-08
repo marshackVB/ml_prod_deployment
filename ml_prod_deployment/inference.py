@@ -3,6 +3,10 @@
 
 # COMMAND ----------
 
+# MAGIC %pip install -q -r requirements.txt
+
+# COMMAND ----------
+
 import mlflow
 from mlflow.tracking import MlflowClient
 from pyspark.sql.functions import struct, col
