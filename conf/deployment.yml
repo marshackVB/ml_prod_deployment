@@ -35,7 +35,7 @@ environments:
           - task_key: 'create-features'
             <<: *basic-static-cluster
             notebook_task:
-              notebook_path: 'notebooks/create_features'
+              notebook_path: 'ml_prod_deployment/create_features'
             deployment_config:
               no_package: true
       #######################################################################################
@@ -50,7 +50,7 @@ environments:
           - task_key: 'train-model'
             <<: *basic-static-cluster
             notebook_task:
-              notebook_path: 'notebooks/trainer'
+              notebook_path: 'ml_prod_deployment/trainer'
             deployment_config:
               no_package: true
       #######################################################################################
