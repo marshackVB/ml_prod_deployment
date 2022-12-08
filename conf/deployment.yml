@@ -2,17 +2,57 @@
 # Please read YAML documentation for details on how to use substitutions and anchors.
 custom:
   basic-cluster-props: &basic-cluster-props
-    spark_version: "10.4.x-cpu-ml-scala2.12"
+    spark_version: "11.3.x-cpu-ml-scala2.12"
 
   basic-static-cluster: &basic-static-cluster
     new_cluster:
       <<: *basic-cluster-props
-      num_workers: 1
-      node_type_id: "Standard_E8_v3"
+      num_workers: 0
+      node_type_id: "i3.xlarge"
+      spark_conf:
+        spark.master: "local[*, 4]"
+        spark.databricks.cluster.profile: "singleNode"
+      custom_tags:
+        ResourceClass: "SingleNode"
+
 
 environments:
   default:
     workflows:
+      #######################################################################################
+      #   Populate Feature Tables                                                           #
+      #######################################################################################
+      - name: "ml-prod-deployment-create-features"
+        git_source:
+          git_url: https://github.com/marshackVB/ml_prod_deployment.git
+          git_provider: "github"
+          git_branch: "master"
+        schedule: 
+          quartz_cron_expression: "35 0 0 * * ?"
+          timezone_id: "UTC"
+          pause_status": "UNPAUSED"
+        tasks:
+          - task_key: 'create-features'
+            <<: *basic-static-cluster
+            notebook_task:
+              notebook_path: 'notebooks/create_features'
+            deployment_config:
+              no_package: true
+      #######################################################################################
+      #   Train model                                                                       #
+      #######################################################################################
+      - name: "ml-prod-deployment-train-model"
+        git_source:
+          git_url: https://github.com/marshackVB/ml_prod_deployment.git
+          git_provider: "github"
+          git_branch: "master"
+        tasks:
+          - task_key: 'train-model'
+            <<: *basic-static-cluster
+            notebook_task:
+              notebook_path: 'notebooks/trainer'
+            deployment_config:
+              no_package: true
       #######################################################################################
       #   Example workflow for integration tests                                            #
       #######################################################################################
@@ -68,4 +108,3 @@ environments:
             job_cluster_key: "default"
             notebook_task:
               notebook_path: "/Repos/Staging/ml_prod_deployment/notebooks/sample_notebook"
-

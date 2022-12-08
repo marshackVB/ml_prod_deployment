@@ -1,0 +1,14 @@
+{
+    "environments": {
+        "default": {
+            "profile": "ml-prod-deployment",
+            "storage_type": "mlflow",
+            "properties": {
+                "workspace_directory": "/Shared/dbx/ml_prod_deployment",
+                "artifact_location": "dbfs:/Shared/dbx/projects/ml_prod_deployment"
+            }
+        }
+    },
+    "inplace_jinja_support": false,
+    "failsafe_cluster_reuse_with_assets": false
+}

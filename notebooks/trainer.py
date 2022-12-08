@@ -1,5 +1,7 @@
 # Databricks notebook source
 # MAGIC %md ## Model training workflow
+# MAGIC 
+# MAGIC Note: Integration test should be a multi-task job that runs one notebook to train a model and another to load the model and perform inference. Move the "run_as_integration_test" to the inference notebook and add an assert statement.
 
 # COMMAND ----------
 
@@ -20,26 +22,54 @@ from sklearn.metrics import precision_recall_fscore_support
 from sklearn.model_selection import train_test_split
 import pandas as pd
 
+from util import get_or_create_experiment, get_yaml_config
+
+client = MlflowClient()
+
 # COMMAND ----------
 
-# MAGIC %md Create an MLflow experiment if one does not exist
+# MAGIC %md Set flag to determine if notebook is being run as part of an integration test
 
 # COMMAND ----------
 
-def get_or_create_experiment(experiment_location: str) -> None:
- 
-  if not mlflow.get_experiment_by_name(experiment_location):
-    print("Experiment does not exist. Creating experiment")
-    
-    mlflow.create_experiment(experiment_location)
-    
-  mlflow.set_experiment(experiment_location)
+#dbutils.widgets.dropdown("run_as_integration_test", "False", ["True", "False"])
+dbutils.widgets.dropdown("compare_model_registry_versions", "True", ["True", "False"])
 
+#run_as_integration_test = True if dbutils.widgets.get("run_as_integration_test") == "True" else False
+compare_model_registry_versions = True if dbutils.widgets.get("compare_model_registry_versions") == "True" else False
 
-experiment_location = '/Shared/ml_production_experiment'
-get_or_create_experiment(experiment_location)
+# COMMAND ----------
 
-mlflow.set_experiment(experiment_location)
+# MAGIC %md Training parameters
+
+# COMMAND ----------
+
+training_config = get_yaml_config("training_scoring_config.yaml")
+
+# COMMAND ----------
+
+# MAGIC %md Model hyperparameters for prodution model
+
+# COMMAND ----------
+
+xgboost_params = {"n_estimators":25, 
+                  "max_depth":5,
+                  "use_label_encoder":False}
+
+# COMMAND ----------
+
+# MAGIC %md Create an MLflow Experiment and Model Registry entry if they do not already exist
+
+# COMMAND ----------
+
+get_or_create_experiment(training_config.mlflow_experiment_location)
+mlflow.set_experiment(training_config.mlflow_experiment_location)
+
+try:
+  client.get_registered_model(training_config.mlflow_model_registry_name)
+  print("A Model Registry entry with this name already exists")
+except:
+  client.create_registered_model(training_config.mlflow_model_registry_name)
 
 # COMMAND ----------
 
@@ -48,7 +78,7 @@ mlflow.set_experiment(experiment_location)
 # COMMAND ----------
 
 # Convert to Pandas for scikit-learn training
-data = spark.table('default.passenger_featurs_combined').toPandas()
+data = spark.table(training_config.feature_table_name).toPandas()
 
 # Split into training and test datasets
 label = 'Survived'
@@ -76,7 +106,7 @@ transformer = ColumnTransformer([('categorial_vars', categorical_transform, cate
 
 # Specify the model
 # See Hyperopt for hyperparameter tuning: https://docs.databricks.com/applications/machine-learning/automl-hyperparam-tuning/index.html
-model = xgb.XGBClassifier(n_estimators = 50, use_label_encoder=False)
+model = xgb.XGBClassifier(**xgboost_params)
 
 classification_pipeline = Pipeline([("preprocess", transformer), ("classifier", model)])
 
@@ -112,3 +142,95 @@ with mlflow.start_run() as run:
   
   # Log the model and training data metadata
   mlflow.sklearn.log_model(final_model, artifact_path="model")
+
+# COMMAND ----------
+
+# MAGIC %md Register new model as a version in the Model Registry
+
+# COMMAND ----------
+
+new_model_experiment = client.get_run(run_id)
+new_model_validation_stat = new_model_experiment.data.metrics[training_config.validation_statistic_to_compare]
+new_model_info = client.get_run(run_id).to_dictionary()
+new_model_artifact_uri = new_model_info['info']['artifact_uri']
+
+new_registered_model = client.create_model_version(
+                         name = training_config.mlflow_model_registry_name,
+                         source = new_model_artifact_uri + "/model",
+                         run_id = run_id,
+                         )
+
+# COMMAND ----------
+
+# MAGIC %md Transition new model to the Production stage in the Model Registry if appropriate criteria are met
+
+# COMMAND ----------
+
+if compare_model_registry_versions:
+  """
+  Confirm a Production model exists in the registry. Locate its Experiment run and capture its validation
+  statistic. Compare the existing Production model's statistics to the new model. Promote the new model
+  to the Production stage, archiving the existing model, only if the new model's validation statistic is
+  at least as good as the current Production model.
+  
+  If an existing Production model does not exist, the new model will be transitioned to the Production stage.
+  Similarly, if compare_model_registry_versions = False, the new model will be transitiond to the Production
+  stage.
+  """
+  
+  model_registry_versions = client.search_model_versions(f"name='{training_config.mlflow_model_registry_name}'")
+  model_registry_stages = [run.current_stage for run in model_registry_versions]
+  production_model_exists = True if 'Production' in model_registry_stages else False
+
+  if production_model_exists:
+    production_model_run_id = [run for run in model_registry_versions if run.current_stage == 'Production'][0].run_id
+    production_model_experiment = client.get_run(production_model_run_id)
+    production_model_validation_stat = production_model_experiment.data.metrics[training_config.validation_statistic_to_compare]
+
+    print(f"""New model {training_config.validation_statistic_to_compare} score is {new_model_validation_stat} compare to production model's {production_model_validation_stat}""")
+
+    if new_model_validation_stat >= production_model_validation_stat:
+      print("Transitioning new model to Production and archiving existing Production model")
+            
+      promote_to_prod = client.transition_model_version_stage(name=training_config.mlflow_model_registry_name,
+                                                        version = int(new_registered_model.version),
+                                                        stage="Production",
+                                                        archive_existing_versions=True)
+      
+      update_new_model_version = client.update_model_version(name=training_config.mlflow_model_registry_name,
+                                                             version=new_registered_model.version,
+                                                             description = f"""Model's {training_config.validation_statistic_to_compare} score is {new_model_validation_stat} \
+                                                                           compared to prior Production model's {production_model_validation_stat}; this model was transitioned \
+                                                                           to Production""")
+
+    else:
+      print("New model will not be trasitioned to production")
+      
+      update_new_model_version = client.update_model_version(name=training_config.mlflow_model_registry_name,
+                                                             version=new_registered_model.version,
+                                                             description = f"""Model's {training_config.validation_statistic_to_compare} score is {new_model_validation_stat} \
+                                                                           compared to prior Production model's {production_model_validation_stat}; this model was not transitioned \
+                                                                           to Production""")
+  else:
+    print("A model in the Production stage does not exist in the Model Registry, promoting the new model to Production")
+    
+    promote_to_prod = client.transition_model_version_stage(name=training_config.mlflow_model_registry_name,
+                                                          version = int(new_registered_model.version),
+                                                          stage="Production",
+                                                          archive_existing_versions=True)
+
+    update_new_model_version = client.update_model_version(name=training_config.mlflow_model_registry_name,
+                                                               version=new_registered_model.version,
+                                                               description = f"""This model was not compared to a pre-existing Production model because one did not exist""")
+
+else:
+  print("Transition new model to Production without a comparison to existing Production model")
+    
+  promote_to_prod = client.transition_model_version_stage(name=training_config.mlflow_model_registry_name,
+                                                          version = int(new_registered_model.version),
+                                                          stage="Production",
+                                                          archive_existing_versions=True)
+
+  update_new_model_version = client.update_model_version(name=training_config.mlflow_model_registry_name,
+                                                        version=new_registered_model.version,
+                                                        description = f"""This model was not compared to a pre-existing Production because the comparison was not requested""")
