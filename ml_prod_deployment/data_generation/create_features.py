@@ -54,9 +54,9 @@ def create_pd_dataframe(csv_file_path, schema):
     return spark.createDataFrame(df, schema = schema)
   
   
-passenger_ticket_raw = create_pd_dataframe('../data/passenger_ticket.csv', passenger_ticket_schema)
-passenger_demographic_raw = create_pd_dataframe('../data/passenger_demographic.csv', passenger_dempgraphic_schema)
-passenger_labels = create_pd_dataframe('../data/passenger_labels.csv', passenger_label_schema)
+passenger_ticket_raw = create_pd_dataframe('../../data/passenger_ticket.csv', passenger_ticket_schema)
+passenger_demographic_raw = create_pd_dataframe('../../data/passenger_demographic.csv', passenger_dempgraphic_schema)
+passenger_labels = create_pd_dataframe('../../data/passenger_labels.csv', passenger_label_schema)
 
 # COMMAND ----------
 
