@@ -20,22 +20,18 @@ environments:
   default:
     workflows:
       #######################################################################################
-      #   Populate Feature Tables                                                           #
+      #   Populate Feature Table                                                            #
       #######################################################################################
       - name: "ml-prod-deployment-create-features"
         git_source:
           git_url: https://github.com/marshackVB/ml_prod_deployment.git
           git_provider: "github"
           git_branch: "master"
-        schedule: 
-          quartz_cron_expression: "35 0 0 * * ?"
-          timezone_id: "UTC"
-          pause_status": "UNPAUSED"
         tasks:
-          - task_key: 'create-features'
+          - task_key: "create-features"
             <<: *basic-static-cluster
             notebook_task:
-              notebook_path: 'ml_prod_deployment/create_features'
+              notebook_path: "ml_prod_deployment/data_generation/create_features"
             deployment_config:
               no_package: true
       #######################################################################################
@@ -47,64 +43,53 @@ environments:
           git_provider: "github"
           git_branch: "master"
         tasks:
-          - task_key: 'train-model'
+          - task_key: "train-model"
             <<: *basic-static-cluster
             notebook_task:
-              notebook_path: 'ml_prod_deployment/trainer'
+              notebook_path: "ml_prod_deployment/trainer"
+              base_parameters: {"compare_model_registry_versions" : "True"}
             deployment_config:
               no_package: true
       #######################################################################################
-      #   Example workflow for integration tests                                            #
+      #   Score records - one time run                                                      #
+      #   Load the production model and score records from the training dataset as          #
+      #   a one-off job. This job is designed to test the inference process                 #
       #######################################################################################
-      - name: "ml-prod-deployment-sample-tests"
+      - name: "ml-prod-deployment-score-records-one-time"
+        git_source:
+          git_url: https://github.com/marshackVB/ml_prod_deployment.git
+          git_provider: "github"
+          git_branch: "master"
         tasks:
-          - task_key: "main"
+          - task_key: "train-model"
             <<: *basic-static-cluster
-            spark_python_task:
-                python_file: "file://tests/entrypoint.py"
-                # this call supports all standard pytest arguments
-                parameters: ["file:fuse://tests/integration", "--cov=ml_prod_deployment"]
-      #######################################################################################
-      # this is an example job with single ETL task based on 2.1 API and wheel_task format #
-      ######################################################################################
-      - name: "ml-prod-deployment-sample-etl"
-        tasks:
-          - task_key: "main"
-            <<: *basic-static-cluster
-            python_wheel_task:
-              package_name: "ml_prod_deployment"
-              entry_point: "etl" # take a look at the setup.py entry_points section for details on how to define an entrypoint
-              parameters: ["--conf-file", "file:fuse://conf/tasks/sample_etl_config.yml"]
-      #############################################################
-      # this is an example multitask job with notebook task       #
-      #############################################################
-      - name: "ml-prod-deployment-sample-multitask"
-        job_clusters:
-          - job_cluster_key: "default"
-            <<: *basic-static-cluster
-        tasks:
-          - task_key: "etl"
-            job_cluster_key: "default"
-            spark_python_task:
-              python_file: "file://ml_prod_deployment/tasks/sample_etl_task.py"
-              parameters: [ "--conf-file", "file:fuse://conf/tasks/sample_etl_config.yml" ]
-          - task_key: "ml"
-            depends_on:
-              - task_key: "etl"
-            job_cluster_key: "default"
-            python_wheel_task:
-              package_name: "ml_prod_deployment"
-              entry_point: "ml"
-              parameters: [ "--conf-file", "file:fuse://conf/tasks/sample_ml_config.yml" ]
-          ###############################################################################
-          # this is an example task based on the notebook                               #
-          # Please note that first you'll need to add a Repo and commit notebook to it. #
-          ###############################################################################
-          - task_key: "notebook"
-            deployment_config:
-              no_package: true # we omit using package since code will be shipped directly from the Repo
-            depends_on:
-              - task_key: "ml"
-            job_cluster_key: "default"
             notebook_task:
-              notebook_path: "/Repos/Staging/ml_prod_deployment/notebooks/sample_notebook"
+              notebook_path: "ml_prod_deployment/inference"
+              base_parameters: {"run_as_integration_test" : "True"}
+            deployment_config:
+              no_package: true
+      #######################################################################################
+      #   Score records - create schedule job                                               #
+      #   This is the job configuration used for production inference                       #
+      #######################################################################################
+      - name: "ml-prod-deployment-score-records"
+        git_source:
+          git_url: https://github.com/marshackVB/ml_prod_deployment.git
+          git_provider: "github"
+          git_branch: "master"
+        schedule: 
+          quartz_cron_expression: "35 0 0 * * ?"
+          timezone_id: "UTC"
+          pause_status": "UNPAUSED"
+        tasks:
+          - task_key: "train-model"
+            <<: *basic-static-cluster
+            notebook_task:
+              notebook_path: "ml_prod_deployment/inference"
+            max_retries: 10
+            min_retry_interval_millis: 900000
+            retry_on_timeout: false
+            timeout_seconds: 0
+            email_notifications: {"marshall.carter@databricks.com"}
+            deployment_config:
+              no_package: true
