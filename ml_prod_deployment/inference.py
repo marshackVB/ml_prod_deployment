@@ -37,7 +37,7 @@ def get_run_id(model_name, stage='Production'):
 production_run_id = get_run_id(scoring_config.mlflow_model_registry_name, stage='Production')
 production_model_uri = f"runs:/{production_run_id}/model"
 
-print(f"Loading Production model from Registry, {scoring_config.mlflow_model_registry_name}, with run_id: {run_id}")
+print(f"Loading Production model from Registry, {scoring_config.mlflow_model_registry_name}, with run_id: {production_run_id}")
 
 loaded_model = mlflow.pyfunc.load_model(f"runs:/{production_run_id}/model")
 
