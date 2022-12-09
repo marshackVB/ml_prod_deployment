@@ -21,7 +21,7 @@ custom:
 # dbx's Jinga templating functionality... 
 # https://dbx.readthedocs.io/en/latest/guides/python/devops/notebook/#using-jinja-to-pass-tags-and-branches-from-environment-variables.
 # This is important for integration testing where the project needs to be run from the branch attemping to merge into 
-# the master branch of the repository.
+# the master branch of the repository. See the last job definition for an example that uses this technique.
 environments:
   default:
     workflows:
@@ -97,5 +97,23 @@ environments:
             retry_on_timeout: false
             timeout_seconds: 0
             email_notifications: {"marshall.carter@databricks.com"}
+            deployment_config:
+              no_package: true
+      ##########################################################################################
+      #   Example using an inplace Jinga function. This requires that the environment variable #
+      #   'GIT_BRANCH' is set. This method is used to dynamically deploy Jobs from different   #
+      #   branches of a remote repository.                                                     #
+      #   ex. export GIT_BRANCH=develop                                                        #
+      ##########################################################################################
+      - name: "ml-prod-deployment-create-features-jinga"
+        git_source:
+          git_url: https://github.com/marshackVB/ml_prod_deployment.git
+          git_provider: "github"
+          git_branch: "{{env['GIT_BRANCH']}}"
+        tasks:
+          - task_key: "create-features"
+            <<: *basic-static-cluster
+            notebook_task:
+              notebook_path: "ml_prod_deployment/data_generation/create_features"
             deployment_config:
               no_package: true
