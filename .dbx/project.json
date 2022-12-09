@@ -1,7 +1,15 @@
 {
     "environments": {
         "default": {
-            "profile": "ml-prod-deployment",
+            "profile": "ml-prod-deployment-azure-development",
+            "storage_type": "mlflow",
+            "properties": {
+                "workspace_directory": "/Shared/dbx/ml_prod_deployment",
+                "artifact_location": "dbfs:/Shared/dbx/projects/ml_prod_deployment"
+            }
+        },
+        "production": {
+            "profile": "ml-prod-deployment-azure-production",
             "storage_type": "mlflow",
             "properties": {
                 "workspace_directory": "/Shared/dbx/ml_prod_deployment",
