@@ -15,7 +15,8 @@ custom:
       custom_tags:
         ResourceClass: "SingleNode"
 
-
+build:
+  no_build: true
 environments:
   default:
     workflows:

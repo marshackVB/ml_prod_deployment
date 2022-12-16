@@ -39,20 +39,20 @@ See the [dbx documentation and tutorials](https://dbx.readthedocs.io/en/latest/g
   ### Creating the datasets
   In your terminal, cd to this project's directory and execute the below commands. The job will be executed in the default Databricks environment, which is specified in the .dbx/project.json file. To run in another environment, add the --environment parameter and specify another environment name defined in the project.json file.
   ```
-  dbx deploy ml-prod-deployment-create-features --assets-only
+  dbx deploy ml-prod-deployment-create-features --assets-only --no-package
   dbx launch ml-prod-deployment-create-features --from-assets --trace
   ```
 
   ### Training the model
 
   ```
-  dbx deploy ml-prod-deployment-train-model --assets-only
+  dbx deploy ml-prod-deployment-train-model --assets-only --no-package
   dbx launch ml-prod-deployment-train-model --from-assets --trace
   ```
 
   ### Creating a recurring inference job
   ```
-  dbx deploy ml-prod-deployment-score-records
+  dbx deploy ml-prod-deployment-score-records --no-package
   dbx launch ml-prod-deployment-score-records
   ```
   The above deploy command creates a persistent job in the Databricks Jobs UI that runs on a schedule defined in the conf/deployment.yml file. Calling 'dbx launch' then starts a run of this Job, outside of its normal run schedule.
@@ -71,14 +71,14 @@ Integration tests are designed to test a project execution as a whole. These typ
 
 To test the model training workflow, simply run the same commands noted above.
 ```
-dbx deploy ml-prod-deployment-train-model --assets-only
+dbx deploy ml-prod-deployment-train-model --assets-only --no-package
 dbx launch ml-prod-deployment-train-model --from-assets --trace
 ```
 If the Job fails for any reason, it will trigger an error in your terminal or CICD server. The failed Job run will contain a copy of the Databricks Notebook and any error messsages.
 
 To test the model inference workflow, run the below commands
 ```
-dbx deploy ml-prod-deployment-score-records-one-time --assets-only
+dbx deploy ml-prod-deployment-score-records-one-time --assets-only --no-package
 dbx launch ml-prod-deployment-score-records-one-time --from-assets --trace
 ```
 The inference workflow contains an assert statement that can optionally be triggered to test that inference results are as epxected.
