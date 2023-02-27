@@ -14,7 +14,7 @@ jobs:
       - checkout
       - run:
           name: Install dependencies
-          commad: pip install -r requirements.txt
+          command: pip install -r requirements.txt
       - run:
           name: Run integration test
           command: | 
@@ -27,7 +27,7 @@ workflows:
     jobs:
       - integration_test
 
-      
+
 
 
 
