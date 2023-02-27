@@ -13,8 +13,8 @@ jobs:
     docker:
       - image: cimg/python:3.10.2
     environment: 
-      DATABRICKS_HOST: $DATABRICKS_HOST_STAGING
-      DATABRICKS_TOKEN: $DATABRICKS_TOKEN_STAGING
+      DATABRICKS_HOST: ${DATABRICKS_HOST_STAGING}
+      DATABRICKS_TOKEN: ${DATABRICKS_TOKEN_STAGING}
 
     steps:
       - checkout
