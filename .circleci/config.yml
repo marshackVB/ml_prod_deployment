@@ -15,7 +15,7 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Configure environment variables for staging
+          name: Configure environment variables for Staging
           command: |
                   echo "export DATABRICKS_HOST=$DATABRICKS_HOST_STAGING" >> "$BASH_ENV"
                   echo "export DATABRICKS_TOKEN=$DATABRICKS_TOKEN_STAGING" >> "$BASH_ENV"
@@ -25,7 +25,7 @@ jobs:
           command: pip install -r requirements.txt
 
       - run:
-          name: Run integration test
+          name: Run integration test in Staging
           command: | 
                   dbx deploy ml-prod-deployment-train-model --assets-only --no-package
                   dbx launch ml-prod-deployment-train-model --from-assets --trace
@@ -37,7 +37,7 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Configure environment variables for staging
+          name: Configure environment variables for Production
           command: |
                   echo "export DATABRICKS_HOST=$DATABRICKS_HOST_PRODUCTION" >> "$BASH_ENV"
                   echo "export DATABRICKS_TOKEN=$DATABRICKS_TOKEN_PRODUCTION" >> "$BASH_ENV"
@@ -47,13 +47,13 @@ jobs:
           command: pip install -r requirements.txt
 
       - run:
-          name: Train model in production
+          name: Train model in Production
           command: | 
                   dbx deploy ml-prod-deployment-train-model --assets-only --no-package
                   dbx launch ml-prod-deployment-train-model --from-assets --trace
 
       - run:
-          name: Create inference job
+          name: Create recuring inference job in Production
           command: | 
                   dbx deploy ml-prod-deployment-score-records --no-package
                   dbx launch ml-prod-deployment-score-records
