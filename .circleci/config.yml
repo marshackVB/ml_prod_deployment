@@ -22,7 +22,7 @@ jobs:
       - run:
           name: Environment variable configuration
           command: |
-                  echo "export CURRENT_BRANCH=$CURRENT_BRANCH" >> "$BASH_ENV"
+                  echo "export CURRENT_BRANCH=$CIRCLE_BRANCH" >> "$BASH_ENV"
       - run:
           name: Print environment variables
           command: | 
