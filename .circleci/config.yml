@@ -12,24 +12,20 @@ jobs:
   integration_test:
     docker:
       - image: cimg/python:3.10.2
-    environment: 
-      DATABRICKS_HOST: $DATABRICKS_HOST_STAGING
-      DATABRICKS_TOKEN: $DATABRICKS_TOKEN_STAGING
-      TEST_VAR: test_var
 
     steps:
       - checkout
       - run:
           name: Environment variable configuration
           command: |
-                  echo "export CURRENT_BRANCH=$CIRCLE_BRANCH" >> "$BASH_ENV"
+                  echo "export DATABRICKS_HOST=$DATABRICKS_HOST_STAGING" >> "$BASH_ENV"
+                  echo "export DATABRICKS_TOKEN=$DATABRICKS_TOKEN_STAGING" >> "$BASH_ENV"
       - run:
           name: Print environment variables
           command: | 
                   echo $DATABRICKS_HOST
                   echo $DATABRICKS_TOKEN
-                  echo $CURRENT_BRANCH
-                  echo $TEST_VAR
+ 
       #- run:
       #    name: Install dependencies
       #    command: pip install -r requirements.txt
