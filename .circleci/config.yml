@@ -15,7 +15,7 @@ jobs:
     environment: 
       DATABRICKS_HOST: $DATABRICKS_HOST_STAGING
       DATABRICKS_TOKEN: $DATABRICKS_TOKEN_STAGING
-      
+
     steps:
       - checkout
       - run:
@@ -32,10 +32,3 @@ workflows:
   main:
     jobs:
       - integration_test
-
-
-
-env:
-      DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
-      DATABRICKS_TOKEN:  ${{ secrets.DATABRICKS_TOKEN }}
-
