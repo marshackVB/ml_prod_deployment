@@ -15,6 +15,7 @@ jobs:
     environment: 
       DATABRICKS_HOST: $DATABRICKS_HOST_STAGING
       DATABRICKS_TOKEN: $DATABRICKS_TOKEN_STAGING
+      CURRENT_BRANCH: $CIRCLE_BRANCH
       TEST_VAR: test_var
 
     steps:
@@ -24,6 +25,7 @@ jobs:
           command: | 
                   echo $DATABRICKS_HOST
                   echo $DATABRICKS_TOKEN
+                  echo $CURRENT_BRANCH
                   echo $TEST_VAR
       #- run:
       #    name: Install dependencies
