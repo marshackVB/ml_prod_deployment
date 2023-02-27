@@ -22,3 +22,12 @@ jobs:
                   dbx launch ml-prod_deployment-train-model --from-assets --trace
 
 
+workflows:
+  main:
+    jobs:
+      - integration_test
+
+      
+
+
+
