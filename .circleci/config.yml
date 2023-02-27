@@ -1,0 +1,71 @@
+# Use the latest 2.1 version of CircleCI pipeline process engine.
+# See: https://circleci.com/docs/2.0/configuration-reference
+# Useful tutorial: https://circleci.com/blog/publishing-a-python-package/?utm_source=google&utm_medium=sem&utm_campaign=sem-google-dg--uscan-en-dsa-tROAS-auth-brand&utm_term=g_-_c__dsa_&utm_content=&gclid=CjwKCAiAxvGfBhB-EiwAMPakqkhwFb8DT7tzxP7YFY-kdVR5nWMX4i9BGPr0DUXoWhpWys8SEmzLixoCs6wQAvD_BwE
+
+version: 2.1
+
+orbs:
+  python: circleci/python@1.5.0
+
+jobs:
+  unit_and_integration_tests:
+    docker:
+      - image: cimg/python:3.10.2
+
+    steps:
+      - checkout
+      - run:
+          name: Configure environment variables for Staging
+          command: |
+                  echo "export DATABRICKS_HOST=$DATABRICKS_HOST_STAGING" >> "$BASH_ENV"
+                  echo "export DATABRICKS_TOKEN=$DATABRICKS_TOKEN_STAGING" >> "$BASH_ENV"
+
+      - run:
+          name: Install dependencies
+          command: pip install -r requirements.txt
+
+      - run:
+          name: Run integration test in Staging
+          command: | 
+                  dbx deploy ml-prod-deployment-train-model --assets-only --no-package
+                  dbx launch ml-prod-deployment-train-model --from-assets --trace
+
+  deploy_production_jobs:
+    docker:
+      - image: cimg/python:3.10.2
+
+    steps:
+      - checkout
+      - run:
+          name: Configure environment variables for Production
+          command: |
+                  echo "export DATABRICKS_HOST=$DATABRICKS_HOST_PRODUCTION" >> "$BASH_ENV"
+                  echo "export DATABRICKS_TOKEN=$DATABRICKS_TOKEN_PRODUCTION" >> "$BASH_ENV"
+
+      - run:
+          name: Install dependencies
+          command: pip install -r requirements.txt
+
+      - run:
+          name: Train model in Production
+          command: | 
+                  dbx deploy ml-prod-deployment-train-model --assets-only --no-package
+                  dbx launch ml-prod-deployment-train-model --from-assets --trace
+
+      - run:
+          name: Create recuring inference job in Production
+          command: | 
+                  dbx deploy ml-prod-deployment-score-records --no-package
+                  dbx launch ml-prod-deployment-score-records
+
+workflows:
+  main:
+    jobs:
+      - unit_and_integration_tests
+      - deploy_production_jobs:
+          requires:
+              - unit_and_integration_tests
+          filters:
+            branches:
+              only:
+                - master
