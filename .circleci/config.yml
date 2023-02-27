@@ -12,13 +12,12 @@ jobs:
   integration_test:
     docker:
       - image: cimg/python:3.10.2
+    environment: 
+      DATABRICKS_HOST: $DATABRICKS_HOST_STAGING
+      DATABRICKS_TOKEN: $DATABRICKS_TOKEN_STAGING
+      
     steps:
       - checkout
-      - run:
-          name:  Configure Databricks environment variables
-          command: | 
-                  export DATABRICKS_HOST=$DATABRICKS_HOST_STAGING
-                  export DATABRICKS_TOKEN=$DATABRICKS_TOKEN_STAGING
       - run:
           name: Install dependencies
           command: pip install -r requirements.txt
