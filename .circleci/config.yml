@@ -10,6 +10,7 @@ orbs:
 
 jobs:
   integration_test:
+    working_directory: ~/transformers
     docker:
       - image: cimg/python:3.10.2
 
@@ -20,7 +21,7 @@ jobs:
           command: |
                   echo "export DATABRICKS_HOST=$DATABRICKS_HOST_STAGING" >> "$BASH_ENV"
                   echo "export DATABRICKS_TOKEN=$DATABRICKS_TOKEN_STAGING" >> "$BASH_ENV"
-                  
+
       - run:
           name: Print environment variables
           command: | 
@@ -35,7 +36,7 @@ jobs:
           name: Run integration test
           command: | 
                   dbx deploy ml-prod-deployment-train-model --assets-only --no-package
-                  dbx launch ml-prod_deployment-train-model --from-assets --trace
+                  dbx launch ml-prod-deployment-train-model --from-assets --trace
 
 
 workflows:
